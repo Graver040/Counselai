@@ -1,0 +1,4 @@
+# Add backend Python dependencies here
+flask
+sqlalchemy
+alembic

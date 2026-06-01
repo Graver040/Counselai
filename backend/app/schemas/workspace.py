@@ -1,0 +1,2 @@
+class WorkspaceSchema:
+    pass
