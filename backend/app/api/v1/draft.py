@@ -4,7 +4,7 @@ the workspace's uploaded documents with [Page X] citations.
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.deps import CurrentUser, get_current_user
-from app.services import llm, retrieval
+from app.services import llm, retrieval, usage
 
 router = APIRouter(prefix="/draft", tags=["draft"])
 
@@ -21,9 +21,12 @@ def create_draft(payload: dict, user: CurrentUser = Depends(get_current_user)):
     if not contexts:
         raise HTTPException(404, "No relevant documents found to draft from")
 
-    draft = llm.draft_response(instruction, retrieval.format_context(contexts))
+    res = llm.draft_response(instruction, retrieval.format_context(contexts))
+    usage.log(user.workspace_id, user.user_id, "draft",
+              input_tokens=res.input_tokens, output_tokens=res.output_tokens,
+              model=res.model, meta={"chunks": len(contexts)})
     return {
         "workspace_id": user.workspace_id,
-        "draft": draft,
+        "draft": res.text,
         "citations": retrieval.citations(contexts),
     }

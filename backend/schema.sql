@@ -61,6 +61,23 @@ create index if not exists idx_chunks_doc on document_chunks(document_id);
 alter table document_chunks add column if not exists content text;
 alter table document_chunks drop column if exists chunk_text;
 
+-- ============================================================ USAGE METERING
+-- One row per billable action (upload | ask | draft | checklist). Best-effort:
+-- the backend swallows insert failures so metering never breaks a request.
+create table if not exists usage_logs (
+  id            uuid primary key default gen_random_uuid(),
+  workspace_id  uuid not null references workspaces(id) on delete cascade,
+  user_id       uuid references auth.users(id),
+  action        text not null,                 -- upload | ask | draft | checklist
+  document_id   uuid,
+  input_tokens  int  not null default 0,
+  output_tokens int  not null default 0,
+  model         text,
+  meta          jsonb not null default '{}'::jsonb,
+  created_at    timestamptz not null default now()
+);
+create index if not exists idx_usage_ws_time on usage_logs(workspace_id, created_at);
+
 -- ============================================================ AUTO-PROVISION
 -- Every new auth user gets a workspace + owner membership, so get_current_user
 -- can always resolve a workspace_id (otherwise every request 403s).
@@ -88,6 +105,15 @@ alter table workspaces        enable row level security;
 alter table workspace_members enable row level security;
 alter table documents         enable row level security;
 alter table document_chunks   enable row level security;
+alter table usage_logs        enable row level security;
+
+-- Users can read their own workspaces' usage (writes happen via service role).
+drop policy if exists usage_member_read on usage_logs;
+create policy usage_member_read on usage_logs
+  for select using (
+    exists (select 1 from workspace_members m
+            where m.workspace_id = usage_logs.workspace_id and m.user_id = auth.uid())
+  );
 
 -- Members can see their own membership rows.
 drop policy if exists members_self on workspace_members;

@@ -3,8 +3,12 @@
 Grounded generation only: every prompt is fed the retrieved source block and
 told to answer strictly from it and cite [Page X]. The system prompt is marked
 for prompt caching since it is identical across every request.
+
+Each call returns an LLMResult carrying the text plus token usage, so callers
+can record per-workspace usage for billing/quotas.
 """
 import json
+from dataclasses import dataclass
 
 from app.core.config import get_settings
 
@@ -20,12 +24,20 @@ _SYSTEM = (
 )
 
 
+@dataclass
+class LLMResult:
+    text: str
+    input_tokens: int
+    output_tokens: int
+    model: str
+
+
 def _client():
     from anthropic import Anthropic
     return Anthropic(api_key=get_settings().anthropic_api_key)
 
 
-def _complete(user_prompt: str, max_tokens: int = 1500) -> str:
+def _complete(user_prompt: str, max_tokens: int = 1500) -> LLMResult:
     s = get_settings()
     resp = _client().messages.create(
         model=s.claude_model,
@@ -33,10 +45,16 @@ def _complete(user_prompt: str, max_tokens: int = 1500) -> str:
         system=[{"type": "text", "text": _SYSTEM, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": user_prompt}],
     )
-    return "".join(b.text for b in resp.content if b.type == "text").strip()
+    text = "".join(b.text for b in resp.content if b.type == "text").strip()
+    return LLMResult(
+        text=text,
+        input_tokens=resp.usage.input_tokens,
+        output_tokens=resp.usage.output_tokens,
+        model=s.claude_model,
+    )
 
 
-def answer_question(question: str, source_block: str) -> str:
+def answer_question(question: str, source_block: str) -> LLMResult:
     return _complete(
         f"Sources:\n\n{source_block}\n\n"
         f"Question: {question}\n\n"
@@ -44,7 +62,7 @@ def answer_question(question: str, source_block: str) -> str:
     )
 
 
-def draft_response(instruction: str, source_block: str) -> str:
+def draft_response(instruction: str, source_block: str) -> LLMResult:
     return _complete(
         f"Sources (the notice and related documents):\n\n{source_block}\n\n"
         f"Task: Draft a formal, professional response to the above on behalf of the "
@@ -55,8 +73,8 @@ def draft_response(instruction: str, source_block: str) -> str:
     )
 
 
-def build_checklist(instruction: str, source_block: str) -> list[str]:
-    raw = _complete(
+def checklist(instruction: str, source_block: str) -> LLMResult:
+    return _complete(
         f"Sources (the notice and related documents):\n\n{source_block}\n\n"
         f"Task: Produce a compliance/response checklist of concrete action items the "
         f"assessee must complete to respond correctly. {instruction}\n\n"
@@ -64,10 +82,9 @@ def build_checklist(instruction: str, source_block: str) -> list[str]:
         "[Page X] citation. No prose outside the JSON.",
         max_tokens=1500,
     )
-    return _parse_json_list(raw)
 
 
-def _parse_json_list(raw: str) -> list[str]:
+def parse_checklist(raw: str) -> list[str]:
     """Claude usually returns clean JSON; strip fences / slice to the array if not."""
     text = raw.strip()
     if text.startswith("```"):
@@ -76,8 +93,7 @@ def _parse_json_list(raw: str) -> list[str]:
     start, end = text.find("["), text.rfind("]")
     if start != -1 and end != -1:
         try:
-            items = json.loads(text[start:end + 1])
-            return [str(x) for x in items]
+            return [str(x) for x in json.loads(text[start:end + 1])]
         except json.JSONDecodeError:
             pass
     # fallback: one item per non-empty line

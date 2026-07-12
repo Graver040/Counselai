@@ -12,7 +12,7 @@ from fastapi import (APIRouter, BackgroundTasks, Depends, File,
 
 from app.core.config import get_settings
 from app.core.deps import CurrentUser, get_current_user, get_supabase
-from app.services import vector_store
+from app.services import usage, vector_store
 from app.workers.ingest import run_ingest
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -41,15 +41,24 @@ async def upload_document(
     sb.storage.from_(s.storage_bucket).upload(
         storage_path, pdf_bytes, {"content-type": "application/pdf"}
     )
-    sb.table("documents").insert({
-        "id": doc_id,
-        "workspace_id": user.workspace_id,
-        "uploaded_by": user.user_id,
-        "filename": file.filename,
-        "storage_path": storage_path,
-        "status": "processing",
-    }).execute()
+    try:
+        sb.table("documents").insert({
+            "id": doc_id,
+            "workspace_id": user.workspace_id,
+            "uploaded_by": user.user_id,
+            "filename": file.filename,
+            "storage_path": storage_path,
+            "mime_type": "application/pdf",
+            "file_size": len(pdf_bytes),
+            "status": "processing",
+        }).execute()
+    except Exception:
+        # roll back the orphaned storage object if the DB row can't be created
+        sb.storage.from_(s.storage_bucket).remove([storage_path])
+        raise HTTPException(500, "Failed to create document record")
 
+    usage.log(user.workspace_id, user.user_id, "upload",
+              document_id=doc_id, meta={"bytes": len(pdf_bytes)})
     background.add_task(run_ingest, doc_id, user.workspace_id, storage_path)
     return {"id": doc_id, "status": "processing"}
 

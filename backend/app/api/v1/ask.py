@@ -6,7 +6,7 @@ namespace, and asks Claude to answer strictly from them with [Page X] citations.
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.deps import CurrentUser, get_current_user
-from app.services import llm, retrieval
+from app.services import llm, retrieval, usage
 
 router = APIRouter(prefix="/ask", tags=["ask"])
 
@@ -29,10 +29,13 @@ def ask(payload: dict, user: CurrentUser = Depends(get_current_user)):
             "citations": [],
         }
 
-    answer = llm.answer_question(question, retrieval.format_context(contexts))
+    res = llm.answer_question(question, retrieval.format_context(contexts))
+    usage.log(user.workspace_id, user.user_id, "ask",
+              input_tokens=res.input_tokens, output_tokens=res.output_tokens,
+              model=res.model, meta={"chunks": len(contexts)})
     return {
         "workspace_id": user.workspace_id,
         "question": question,
-        "answer": answer,
+        "answer": res.text,
         "citations": retrieval.citations(contexts),
     }
