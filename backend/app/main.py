@@ -1,6 +1,11 @@
+import certifi
+import os
+os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+
 from app import create_app
 
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
