@@ -78,6 +78,16 @@ create table if not exists usage_logs (
 );
 create index if not exists idx_usage_ws_time on usage_logs(workspace_id, created_at);
 
+-- Backfill columns if an older usage_logs table pre-existed with a different shape
+-- (create-if-not-exists above does NOT alter an existing table):
+alter table usage_logs add column if not exists user_id       uuid;
+alter table usage_logs add column if not exists action        text;
+alter table usage_logs add column if not exists document_id   uuid;
+alter table usage_logs add column if not exists input_tokens  int  not null default 0;
+alter table usage_logs add column if not exists output_tokens int  not null default 0;
+alter table usage_logs add column if not exists model         text;
+alter table usage_logs add column if not exists meta          jsonb not null default '{}'::jsonb;
+
 -- ============================================================ AUTO-PROVISION
 -- Every new auth user gets a workspace + owner membership, so get_current_user
 -- can always resolve a workspace_id (otherwise every request 403s).
