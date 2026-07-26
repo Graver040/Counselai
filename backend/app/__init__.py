@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import auth, workspaces, documents, ask, draft, checklist
+from app.api.v1 import auth, workspaces, documents, ask, draft, checklist, usage
 
 
 def create_app():
@@ -27,4 +27,5 @@ def create_app():
     app.include_router(ask.router, prefix="/api/v1")
     app.include_router(draft.router, prefix="/api/v1")
     app.include_router(checklist.router, prefix="/api/v1")
+    app.include_router(usage.router, prefix="/api/v1")
     return app

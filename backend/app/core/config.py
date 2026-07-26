@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     claude_model: str = "claude-sonnet-4-6"  # balanced cost/quality for per-query RAG
     answer_top_k: int = 8                    # chunks retrieved per question
 
+    # Plan limits (billable AI actions per day). TODO: read plan from a
+    # subscription/profile table once billing lands; defaults to "free".
+    free_daily_limit: int = 10
+    starter_daily_limit: int = 200
+
     # Pinecone
     pinecone_api_key: str = ""
     pinecone_index: str = "counselai"

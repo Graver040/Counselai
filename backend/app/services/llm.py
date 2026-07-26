@@ -54,12 +54,38 @@ def _complete(user_prompt: str, max_tokens: int = 1500) -> LLMResult:
     )
 
 
-def answer_question(question: str, source_block: str) -> LLMResult:
-    return _complete(
+def _answer_prompt(question: str, source_block: str) -> str:
+    return (
         f"Sources:\n\n{source_block}\n\n"
         f"Question: {question}\n\n"
         "Answer the question using only the sources above, with [Page X] citations."
     )
+
+
+def answer_question(question: str, source_block: str) -> LLMResult:
+    return _complete(_answer_prompt(question, source_block))
+
+
+def stream_answer(question: str, source_block: str):
+    """Generator for SSE. Yields {'type':'token','text':...} deltas, then a
+    final {'type':'usage', input_tokens, output_tokens, model} for metering.
+    """
+    s = get_settings()
+    with _client().messages.stream(
+        model=s.claude_model,
+        max_tokens=1500,
+        system=[{"type": "text", "text": _SYSTEM, "cache_control": {"type": "ephemeral"}}],
+        messages=[{"role": "user", "content": _answer_prompt(question, source_block)}],
+    ) as stream:
+        for text in stream.text_stream:
+            yield {"type": "token", "text": text}
+        final = stream.get_final_message()
+    yield {
+        "type": "usage",
+        "input_tokens": final.usage.input_tokens,
+        "output_tokens": final.usage.output_tokens,
+        "model": s.claude_model,
+    }
 
 
 def draft_response(instruction: str, source_block: str) -> LLMResult:
