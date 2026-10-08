@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CounselAI — Answer tax &amp; legal notices, grounded in your own documents</title>
+<meta name="description" content="CounselAI reads your uploaded notices and evidence, then answers questions, drafts formal replies, and builds compliance checklists — every line cited back to the source page." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg0:#F4EFEE;
+    --head:#1C2721; --fg:#3A4A42; --muted:#5F6C5D; --faint:#8C968A;
+    --blue:#B4502F; --blue-strong:#BC5339; --blue-soft:rgba(188,83,57,.1);
+    --emerald:#4F7B58; --emerald-soft:rgba(79,123,88,.13);
+    --amber:#D9A93F; --rose:#C05837;
+    --glass:rgba(255,255,255,.55); --glass-2:rgba(255,255,255,.72);
+    --glass-border:rgba(255,255,255,.85); --glass-line:rgba(44,61,55,.1);
+    --blur:blur(20px) saturate(140%);
+    --shadow-sm:0 2px 8px rgba(40,55,48,.07);
+    --shadow-md:0 14px 34px rgba(40,55,48,.1);
+    --shadow-lg:0 30px 62px rgba(40,55,48,.15);
+    --edge:inset 0 1px 0 rgba(255,255,255,.7);
+    --radius:20px; --maxw:1400px;
+    --ease:cubic-bezier(.2,.7,.2,1);
+    --font-sans:'Hanken Grotesk',system-ui,-apple-system,sans-serif;
+    --font-display:'Bricolage Grotesque','Hanken Grotesk',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-sans);color:var(--fg);line-height:1.6;-webkit-font-smoothing:antialiased;background:var(--bg0);position:relative;overflow-x:hidden}
+  .bg-mesh{position:fixed;inset:0;z-index:-2;background:linear-gradient(168deg,#F7F3EE 0%,#F2ECE5 55%,#EDE6DE 100%)}
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 40px}
+
+  /* ---------- OPENING ANIMATION ---------- */
+  body.booting{overflow:hidden}
+  .boot{position:fixed;inset:0;z-index:200;background:var(--bg0);display:grid;place-items:center;
+    animation:bootOut .6s var(--ease) 1.15s forwards}
+  .boot-mark{width:64px;height:64px;border-radius:20px;background:linear-gradient(150deg,#BC5339,#D86E51);
+    display:grid;place-items:center;color:#fff;animation:bootMark .9s var(--ease) both}
+  .boot-word{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;
+    color:var(--head);margin-top:16px;text-align:center;animation:bootWord .7s var(--ease) .25s both}
+  .boot-word span{color:var(--blue)}
+  .boot-line{width:0;height:2px;border-radius:2px;background:rgba(188,83,57,.35);margin:18px auto 0;
+    animation:bootLine .95s var(--ease) .2s forwards}
+  @keyframes bootMark{from{opacity:0;transform:scale(.72) translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes bootWord{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes bootLine{to{width:120px}}
+  @keyframes bootOut{to{opacity:0;visibility:hidden}}
+
+  /* staggered entrance for the first screen */
+  .rise{opacity:0;transform:translateY(20px);animation:rise .85s var(--ease) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .d1{animation-delay:1.25s}.d2{animation-delay:1.35s}.d3{animation-delay:1.45s}
+  .d4{animation-delay:1.55s}.d5{animation-delay:1.65s}.d6{animation-delay:1.5s}
+
+  @media(prefers-reduced-motion:reduce){
+    .boot{animation-delay:0s;animation-duration:.2s}
+    .boot-mark,.boot-word,.boot-line{animation:none}
+    .rise{animation-duration:.01s;animation-delay:0s}
+  }
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--blue)}
+
+  .glass{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-border);box-shadow:var(--shadow-md),var(--edge)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:15px;border-radius:999px;padding:13px 24px;cursor:pointer;border:1px solid transparent;transition:.18s ease;white-space:nowrap}
+  .btn-primary{background:var(--blue-strong);color:#F4EFEE;box-shadow:0 6px 16px rgba(188,83,57,.24)}
+  .btn-primary:hover{background:#A8492F;transform:translateY(-1px)}
+  .btn-ghost{background:var(--glass-2);backdrop-filter:blur(10px);color:var(--head);border-color:var(--glass-border)}
+  .btn-ghost:hover{background:rgba(255,255,255,.9);transform:translateY(-1px)}
+  .btn-white{background:#F4EFEE;color:#22302B}
+  .btn-white:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+  .btn-lg{padding:15px 30px;font-size:16px}
+
+  /* NAV — slim, hairline, underline-on-hover */
+  .navdock{position:sticky;top:14px;z-index:60;padding:0 40px;margin-top:14px}
+  .navpill{max-width:calc(var(--maxw) - 80px);margin:0 auto;height:58px;border-radius:999px;
+    display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 20px;
+    background:rgba(255,255,255,.62);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+    border:1px solid rgba(44,61,55,.08);
+    box-shadow:0 1px 2px rgba(40,55,48,.04),0 8px 24px rgba(40,55,48,.06),var(--edge);
+    transition:height .3s var(--ease),background .3s var(--ease),box-shadow .3s var(--ease)}
+  .navpill.scrolled{height:52px;background:rgba(255,255,255,.88);
+    box-shadow:0 1px 2px rgba(40,55,48,.05),0 12px 32px rgba(40,55,48,.1),var(--edge)}
+  .logo{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;
+    font-size:17.5px;letter-spacing:-.025em;color:var(--head)}
+  .logo .mark{width:29px;height:29px;border-radius:9px;background:linear-gradient(150deg,#BC5339,#D86E51);
+    display:grid;place-items:center;color:#fff;transition:transform .3s var(--ease)}
+  .logo:hover .mark{transform:rotate(-6deg) scale(1.06)}
+  .logo span{color:var(--blue)}
+  .nav-links{display:flex;align-items:center;gap:2px}
+  .nav-links a{position:relative;font-size:14px;font-weight:600;color:var(--muted);
+    padding:8px 15px;letter-spacing:-.005em;transition:color .2s var(--ease)}
+  .nav-links a::after{content:'';position:absolute;left:15px;right:15px;bottom:3px;height:1.5px;
+    border-radius:2px;background:var(--blue);transform:scaleX(0);transform-origin:left;
+    transition:transform .3s var(--ease)}
+  .nav-links a:hover{color:var(--head)}
+  .nav-links a:hover::after{transform:scaleX(1)}
+  .nav-cta{display:flex;align-items:center;gap:4px}
+  .nav-cta .divider{width:1px;height:20px;background:rgba(44,61,55,.12);margin:0 8px}
+  .nav-cta .signin{font-size:14px;font-weight:600;color:var(--muted);padding:8px 14px;
+    transition:color .2s var(--ease)}
+  .nav-cta .signin:hover{color:var(--head)}
+  .nav-cta .btn{padding:10px 20px;font-size:14px}
+
+  /* HERO */
+  .hero{position:relative;padding:66px 0 36px}
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+  h1.hero-h{font-family:var(--font-display);font-weight:800;font-size:clamp(42px,5.4vw,68px);line-height:.98;letter-spacing:-.03em;color:var(--head)}
+  h1.hero-h em{font-style:normal;color:var(--blue)}
+  .hero-sub{font-size:19px;color:var(--muted);max-width:520px;margin-top:24px}
+  .hero-actions{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+  .badge-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--muted);border-radius:999px;padding:7px 14px;background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--glass-border);box-shadow:var(--shadow-sm)}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+  .hero-note{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--faint);margin-top:18px}
+
+  /* PRODUCT MOCK */
+  .mock{position:relative}
+  .mock-card{border-radius:24px;overflow:hidden}
+  .mock-top{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--glass-line)}
+  .tdot{width:11px;height:11px;border-radius:50%}
+  .mock-tabs{display:flex;gap:4px;margin-left:10px}
+  .mtab{font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:999px;color:var(--faint);cursor:pointer;transition:.15s}
+  .mtab.on{background:var(--blue-soft);color:var(--blue)}
+  .mock-body{padding:22px;min-height:322px}
+  .msg{display:flex;gap:11px;margin-bottom:16px}
+  .avatar{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff}
+  .avatar.u{background:#6E7A69}.avatar.ai{background:linear-gradient(150deg,#BC5339,#D86E51)}
+  .bubble{font-size:14px;color:var(--fg);background:rgba(255,255,255,.6);border:1px solid var(--glass-line);border-radius:14px;padding:12px 14px}
+  .bubble b{color:var(--head)}
+  .cite{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-soft);border-radius:7px;padding:1px 7px;margin:0 2px;cursor:pointer;vertical-align:middle}
+  .checkrow{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--fg);padding:9px 0;border-bottom:1px dashed var(--glass-line)}
+  .checkrow:last-child{border:0}.checkrow b{color:var(--head)}
+  .cbox{width:18px;height:18px;border-radius:6px;background:var(--emerald-soft);color:var(--emerald);display:grid;place-items:center;flex:none;font-size:11px;margin-top:1px}
+  .doc-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-soft);border-radius:8px;padding:4px 10px;margin-bottom:12px}
+  .mock-float{position:absolute;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+  .mf-1{bottom:-24px;left:-28px}.mf-2{top:34px;right:-28px}
+  .mf-icon{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex:none}
+  .mock-float .t1{font-size:12.5px;font-weight:700;color:var(--head)}.mock-float .t2{font-size:11.5px;color:var(--faint)}
+
+  /* TRUST BAR */
+  .trustbar{margin-top:44px;border-radius:22px}
+  .trust-inner{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:28px 22px}
+  .stat b{font-family:var(--font-display);font-weight:800;font-size:34px;color:var(--head);display:block;letter-spacing:-.03em}
+  .stat span{font-size:13.5px;color:var(--muted)}
+
+  /* SECTIONS */
+  section{padding:88px 0}
+  .sec-head{max-width:680px;margin:0 auto 52px;text-align:center}
+  h2.sec-h{font-family:var(--font-display);font-weight:800;font-size:clamp(32px,4.2vw,52px);line-height:1.02;letter-spacing:-.03em;color:var(--head);margin-top:14px}
+  .sec-head p{font-size:17.5px;color:var(--muted);margin-top:16px}
+
+  .prob-grid,.pillars,.fgrid,.price-grid{display:grid;gap:22px}
+  .prob-grid{grid-template-columns:repeat(3,1fr)}
+  .prob-card{border-radius:var(--radius);padding:28px;transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .35s var(--ease)}
+  .prob-card:hover{transform:scale(1.035) translateY(-4px);box-shadow:var(--shadow-lg),var(--edge);border-color:rgba(192,88,55,.3)}
+  .prob-card .ic{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:rgba(192,88,55,.12);color:var(--rose);margin-bottom:16px}
+  .prob-card h3{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--head);margin-bottom:7px;letter-spacing:-.01em}
+  .prob-card p{font-size:14.5px;color:var(--muted)}
+
+  .pillars{grid-template-columns:repeat(3,1fr)}
+  .pillar{position:relative;border-radius:var(--radius);padding:32px;
+    transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .35s var(--ease)}
+  .pillar:hover{transform:scale(1.035) translateY(-5px);box-shadow:var(--shadow-lg),var(--edge);border-color:rgba(188,83,57,.4)}
+  .pillar .ic{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue);margin:0 0 18px;border:1px solid rgba(188,83,57,.2);transition:transform .35s var(--ease)}
+  .pillar:hover .ic{transform:scale(1.08) rotate(-4deg)}
+  .pillar h3{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--head);margin-bottom:9px;letter-spacing:-.02em}
+  .pillar p{font-size:14.5px;color:var(--muted);margin-bottom:16px}
+  .pillar ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .pillar li{display:flex;gap:9px;font-size:13.5px;color:var(--fg)}
+  .pillar li .t{color:var(--emerald);flex:none;font-weight:700}
+  .pillar li b{color:var(--head)}
+
+  /* HOW — dark green contrast band */
+  .how{position:relative;overflow:hidden;border-radius:36px;margin:0 20px;background:linear-gradient(160deg,#243029,#1C2721 60%,#161F1A)}
+  .how-inner{padding:88px 0}
+  .how .eyebrow{color:#E0A98F}
+  .how h2.sec-h{color:#F4EFEE}
+  .how .sec-head p{color:#C3CFBF}
+  /* narrower than the full wrap: these cards carry short copy, so at full
+     width they stretch out of proportion with the rest of the page */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;max-width:1000px;margin:0 auto}
+  .step{border-radius:var(--radius);padding:30px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);backdrop-filter:var(--blur);
+    transition:transform .35s var(--ease),background .35s var(--ease),border-color .35s var(--ease)}
+  .step:hover{transform:scale(1.035) translateY(-4px);background:rgba(255,255,255,.09);border-color:rgba(224,169,143,.35)}
+  .step .n{width:46px;height:46px;border-radius:14px;background:var(--blue-strong);color:#fff;display:grid;place-items:center;margin-bottom:18px;box-shadow:0 6px 16px rgba(0,0,0,.35);transition:transform .35s var(--ease)}
+  .step:hover .n{transform:scale(1.08) rotate(-4deg)}
+  .step h3{font-family:var(--font-display);font-size:19px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em;color:#F4EFEE}
+  .step p{font-size:14.5px;color:#B8C3B5}
+  .step b{color:#F4EFEE}
+
+  /* SPLIT */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+  .split .copy h2{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,3.6vw,44px);line-height:1.04;letter-spacing:-.03em;color:var(--head);margin:14px 0 18px}
+  .split .copy p{font-size:16.5px;color:var(--muted);margin-bottom:22px}
+  .feat-list{display:flex;flex-direction:column;gap:16px}
+  .feat-item{display:flex;gap:13px}
+  .feat-item .ic{width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;background:var(--emerald-soft);color:var(--emerald)}
+  .feat-item h4{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--head)}
+  .feat-item p{font-size:14px;color:var(--muted);margin:2px 0 0}
+  .doc-mock{border-radius:24px;padding:24px}
+  .doc-page{background:rgba(255,255,255,.5);border:1px solid var(--glass-line);border-radius:14px;padding:20px;font-size:12.5px;color:var(--muted);line-height:1.9}
+  .hl{background:rgba(245,225,172,.55);border-bottom:2px solid var(--amber);padding:1px 2px;color:var(--head);border-radius:2px}
+
+  /* FEATURE GRID */
+  .fgrid{grid-template-columns:repeat(3,1fr)}
+  .fcard{border-radius:16px;padding:26px;transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .35s var(--ease)}
+  .fcard:hover{transform:scale(1.04) translateY(-4px);box-shadow:var(--shadow-lg),var(--edge);border-color:rgba(188,83,57,.28)}
+  .fcard .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue);margin-bottom:14px}
+  .fcard h3{font-family:var(--font-display);font-size:16.5px;font-weight:700;color:var(--head);margin-bottom:6px;letter-spacing:-.01em}
+  .fcard p{font-size:14px;color:var(--muted)}
+
+  /* PRICING */
+  .price-grid{grid-template-columns:repeat(3,1fr);align-items:stretch}
+  .price{border-radius:22px;padding:32px;display:flex;flex-direction:column;
+    transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .35s var(--ease)}
+  .price:hover{transform:scale(1.035) translateY(-5px);box-shadow:var(--shadow-lg),var(--edge);border-color:rgba(188,83,57,.35);z-index:2}
+  .price.pop{background:rgba(255,255,255,.72);border:1.5px solid rgba(188,83,57,.5);position:relative}
+  .price.pop .tag{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--blue-strong);color:#F4EFEE;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:6px 15px;border-radius:999px}
+  .price h3{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--head);letter-spacing:-.01em}
+  .price .desc{font-size:13.5px;color:var(--muted);margin:5px 0 18px;min-height:38px}
+  .price .amt{font-family:var(--font-display);font-weight:800;font-size:46px;color:var(--head);letter-spacing:-.03em}
+  .price .amt small{font-family:var(--font-sans);font-size:15px;font-weight:500;color:var(--faint)}
+  .price .cap{font-size:12.5px;color:#B08320;font-weight:700;margin:4px 0 20px}
+  .price ul{list-style:none;display:flex;flex-direction:column;gap:11px;margin-bottom:24px;flex:1}
+  .price li{display:flex;gap:10px;font-size:14px;color:var(--fg)}
+  .price li .t{color:var(--emerald);flex:none;font-weight:700}
+  .price .btn{width:100%}
+
+  /* FAQ */
+  .faq-list{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+  details{border-radius:14px;padding:4px 24px;
+    transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .35s var(--ease)}
+  details:hover{transform:scale(1.015);box-shadow:var(--shadow-md),var(--edge);border-color:rgba(188,83,57,.25)}
+  summary{list-style:none;cursor:pointer;padding:19px 0;font-family:var(--font-display);font-weight:700;font-size:16.5px;color:var(--head);display:flex;justify-content:space-between;align-items:center;gap:16px;letter-spacing:-.01em}
+  summary::-webkit-details-marker{display:none}
+  summary::marker{content:''}
+  /* + that rotates into an × */
+  .plus{position:relative;width:20px;height:20px;flex:none;transition:transform .45s var(--ease)}
+  .plus::before,.plus::after{content:'';position:absolute;left:50%;top:50%;border-radius:2px;
+    background:var(--faint);transition:background .45s var(--ease)}
+  .plus::before{width:15px;height:1.8px;transform:translate(-50%,-50%)}
+  .plus::after{width:1.8px;height:15px;transform:translate(-50%,-50%)}
+  details[open] .plus{transform:rotate(135deg)}
+  details[open] .plus::before,details[open] .plus::after{background:var(--blue)}
+  /* 0fr -> 1fr rather than a height tween: no measuring, no layout thrash,
+     and it still animates cleanly in both directions */
+  .faq-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--ease)}
+  .faq-body.open{grid-template-rows:1fr}
+  .faq-inner{overflow:hidden;min-height:0}
+  .faq-body p{font-size:15px;color:var(--muted);padding:0 0 20px;margin:0}
+
+  /* CTA — vermillion band */
+  .cta{padding:0 0 96px}
+  .cta-band{position:relative;overflow:hidden;border-radius:32px;margin:0 20px;padding:66px 48px;text-align:center;color:#F4EFEE;background:linear-gradient(120deg,#A5432F,#BC5339 48%,#CE6E48)}
+  .cta-band h2{font-family:var(--font-display);font-weight:800;font-size:clamp(30px,4vw,48px);letter-spacing:-.03em;line-height:1.02;position:relative}
+  .cta-band p{font-size:18px;color:#F6E9DF;margin:16px auto 30px;max-width:520px;position:relative}
+  .cta-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative}
+
+  /* FOOTER — full-bleed band, content still measured */
+  footer{margin-top:40px;background:rgba(255,255,255,.5);backdrop-filter:var(--blur);
+    -webkit-backdrop-filter:var(--blur);border-top:1px solid var(--glass-border);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+  .foot-inner{max-width:var(--maxw);margin:0 auto;padding:56px 40px 34px}
+  .foot-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:32px;padding-bottom:36px;border-bottom:1px solid var(--glass-line)}
+  footer .fdesc{font-size:14px;color:var(--muted);margin-top:14px;max-width:280px}
+  .fcol h5{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:14px;font-weight:700}
+  .fcol a{display:block;font-size:14px;color:var(--muted);padding:5px 0}
+  .fcol a:hover{color:var(--blue)}
+  .foot-bot{display:flex;justify-content:space-between;align-items:center;padding-top:22px;font-size:13px;color:var(--faint);flex-wrap:wrap;gap:12px}
+  .disclaimer{font-size:12px;color:var(--faint);max-width:640px;margin-top:14px;line-height:1.6}
+
+  .reveal{opacity:0;transform:translateY(22px);transition:.7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  @media(max-width:900px){
+    .hero-grid,.split,.trust-inner,.prob-grid,.pillars,.steps,.fgrid,.price-grid,.foot-grid{grid-template-columns:1fr}
+    .nav-links{display:none}
+    .trust-inner{grid-template-columns:1fr 1fr;gap:22px 16px}
+    .foot-grid{grid-template-columns:1fr 1fr}
+    .hero{padding:40px 0 20px}
+    section{padding:64px 0}
+    .mock-float{display:none}
+    .cta-band,.foot-inner{padding-left:24px;padding-right:24px}
+    .navpill{padding-left:18px}
+    .wrap{padding:0 20px}
+    .navdock{padding:0 20px}
+  }
+</style>
+</head>
+<body class="booting">
+<div class="bg-mesh"></div>
+
+<!-- OPENING ANIMATION -->
+<div class="boot" id="boot">
+  <div>
+    <div class="boot-mark"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="boot-word">Counsel<span>AI</span></div>
+    <div class="boot-line"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="navdock">
+  <nav class="navpill" id="navpill">
+    <a href="#" class="logo">
+      <span class="mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Counsel<span>AI</span>
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#grounded">Citations</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="nav-cta">
+      <a href="#" class="signin">Sign in</a>
+      <span class="divider"></span>
+      <a href="#" class="btn btn-primary">Get started free</a>
+    </div>
+  </nav>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <span class="eyebrow rise d1">● For CAs, advocates &amp; businesses</span>
+      <h1 class="hero-h rise d2" style="margin-top:20px">Answer tax &amp; legal notices, <em>grounded in your own documents.</em></h1>
+      <p class="hero-sub rise d3">Upload the notice and your evidence. CounselAI answers your questions, drafts a formal reply, and builds a compliance checklist — every line cited back to the exact source page.</p>
+      <div class="hero-actions rise d4">
+        <a href="#" class="btn btn-primary btn-lg">Start free — 10 actions/day</a>
+        <a href="#how" class="btn btn-ghost btn-lg">See how it works</a>
+      </div>
+      <div class="badge-row rise d5">
+        <span class="pill"><span class="dot"></span> Page-level citations</span>
+        <span class="pill"><span class="dot"></span> Hindi &amp; English</span>
+        <span class="pill"><span class="dot"></span> Reads scanned PDFs (OCR)</span>
+      </div>
+      <div class="hero-note rise d5">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="#8C968A" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        No card required · Your documents stay in your private workspace
+      </div>
+    </div>
+
+    <!-- GLASS PRODUCT MOCK -->
+    <div class="mock rise d6">
+      <div class="mock-card glass">
+        <div class="mock-top">
+          <span class="tdot" style="background:#FF5F57"></span>
+          <span class="tdot" style="background:#FEBC2E"></span>
+          <span class="tdot" style="background:#28C840"></span>
+          <div class="mock-tabs">
+            <span class="mtab on" data-tab="ask">Ask</span>
+            <span class="mtab" data-tab="draft">Draft</span>
+            <span class="mtab" data-tab="check">Checklist</span>
+          </div>
+        </div>
+        <div class="mock-body">
+          <div class="tabpane" data-pane="ask">
+            <div class="msg"><div class="avatar u">CA</div><div class="bubble">What is the deadline to respond to this GST notice, and what documents do they want?</div></div>
+            <div class="msg"><div class="avatar ai">AI</div><div class="bubble">The reply is due within <b>30 days of service</b>, i.e. by <b>14 Aug 2026</b> <span class="cite">◈ Page 2</span>. You must furnish the reconciliation of GSTR-3B vs GSTR-2A and purchase invoices for FY 2023–24 <span class="cite">◈ Page 3</span>.</div></div>
+          </div>
+          <div class="tabpane" data-pane="draft" style="display:none">
+            <div class="doc-tag">◈ Draft reply · grounded in 4 sources</div>
+            <div class="doc-page" style="font-size:13px">
+              <b style="color:var(--head)">To,</b> The Assistant Commissioner, CGST Division-III<br><br>
+              <b style="color:var(--head)">Sub:</b> Reply to notice in Form GST DRC-01 dated 15 Jul 2026 <span class="cite">◈ Page 1</span><br><br>
+              Sir/Madam, with reference to the above notice, we submit that the alleged mismatch of ₹2,14,500 <span class="cite">◈ Page 2</span> is fully reconciled by the annexed invoices…
+            </div>
+          </div>
+          <div class="tabpane" data-pane="check" style="display:none">
+            <div class="doc-tag">◈ Response checklist · 5 items</div>
+            <div class="checkrow"><span class="cbox">✓</span><div>File reply in <b>Form GST DRC-06</b> before 14 Aug 2026 <span class="cite">◈ Pg 2</span></div></div>
+            <div class="checkrow"><span class="cbox">✓</span><div>Attach GSTR-3B vs 2A reconciliation, FY 2023–24 <span class="cite">◈ Pg 3</span></div></div>
+            <div class="checkrow"><span class="cbox">✓</span><div>Enclose purchase invoices &amp; e-way bills <span class="cite">◈ Pg 3</span></div></div>
+            <div class="checkrow"><span class="cbox">✓</span><div>Authorised signatory &amp; DSC ready</div></div>
+            <div class="checkrow"><span class="cbox">✓</span><div>Retain acknowledgement (ARN)</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="mock-float glass mf-1">
+        <div class="mf-icon" style="background:var(--emerald-soft);color:var(--emerald)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><div class="t1">Every claim cited</div><div class="t2">Traceable to the page</div></div>
+      </div>
+      <div class="mock-float glass mf-2">
+        <div class="mf-icon" style="background:var(--blue-soft);color:var(--blue)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+        <div><div class="t1">Reply in minutes</div><div class="t2">Not hours</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRUST BAR -->
+  <div class="wrap">
+    <div class="trustbar glass">
+      <div class="trust-inner">
+        <div class="stat"><b>3</b><span>notices → Ask, Draft &amp; Checklist in one place</span></div>
+        <div class="stat"><b>100%</b><span>answers cited to a source page</span></div>
+        <div class="stat"><b>25MB</b><span>PDFs, including scanned &amp; OCR</span></div>
+        <div class="stat"><b>2</b><span>languages — Hindi &amp; English</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section id="problem">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">The problem</span>
+      <h2 class="sec-h">A notice arrives. The clock starts.</h2>
+      <p>Tax and legal notices are dense, time-boxed, and unforgiving. Generic AI chatbots make things up — the last thing you want in a formal reply.</p>
+    </div>
+    <div class="prob-grid">
+      <div class="prob-card glass reveal">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <h3>Tight, non-negotiable deadlines</h3>
+        <p>Miss the response window and you lose the chance to contest — penalties and interest stack up fast.</p>
+      </div>
+      <div class="prob-card glass reveal">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l9 16H3L12 3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4M12 17h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <h3>Hallucinating chatbots</h3>
+        <p>Ask a generic AI and it invents sections and figures. In a legal reply, a made-up citation is a real liability.</p>
+      </div>
+      <div class="prob-card glass reveal">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l5 5v13H6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+        <h3>Hours lost to re-reading files</h3>
+        <p>Cross-referencing a 40-page notice against invoices, ledgers and prior orders is slow, manual and repetitive.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CORE FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">What CounselAI does</span>
+      <h2 class="sec-h">One workspace, three ways to respond</h2>
+      <p>Upload your notice and supporting documents once. CounselAI works only from what you gave it — never from thin air.</p>
+    </div>
+    <div class="pillars">
+      <div class="pillar glass reveal">
+        <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2h13a2 2 0 012 2v10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+        <h3>Ask</h3>
+        <p>Ask anything about your notice in plain language and get a grounded answer with live-typing responses.</p>
+        <ul>
+          <li><span class="t">◆</span> Answers only from your documents</li>
+          <li><span class="t">◆</span> Inline <b>[Page X]</b> citations</li>
+          <li><span class="t">◆</span> Streamed, real-time replies</li>
+        </ul>
+      </div>
+      <div class="pillar glass reveal">
+        <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 20h16M4 20l1-4 10-10 3 3-10 10-4 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.5 6.5l3 3" stroke="currentColor" stroke-width="1.8"/></svg></div>
+        <h3>Draft</h3>
+        <p>Generate a formal, ready-to-review reply to the notice — structured, professional, and fully sourced.</p>
+        <ul>
+          <li><span class="t">◆</span> CBDT &amp; GST notice replies</li>
+          <li><span class="t">◆</span> Legal letters &amp; client memos</li>
+          <li><span class="t">◆</span> Grounded in your evidence</li>
+        </ul>
+      </div>
+      <div class="pillar glass reveal">
+        <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 8l1.5 1.5L12 7M8 14l1.5 1.5L12 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8h3M14 14h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <h3>Checklist</h3>
+        <p>Turn a notice into a clear action list — every requirement, deadline and document you must furnish.</p>
+        <ul>
+          <li><span class="t">◆</span> Deadlines &amp; compliance items</li>
+          <li><span class="t">◆</span> Documents-required list</li>
+          <li><span class="t">◆</span> Each item cited to its page</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW -->
+<section id="how" style="padding-top:0">
+  <div class="how">
+    <div class="how-inner wrap">
+      <div class="sec-head">
+        <span class="eyebrow">How it works</span>
+        <h2 class="sec-h">From PDF to a defensible reply in three steps</h2>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="n"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 0L8 7m4-4l4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></div>
+          <h3>Upload your documents</h3>
+          <p>Drop in the notice plus any evidence — ledgers, invoices, prior orders. Scanned pages are read automatically with OCR.</p>
+        </div>
+        <div class="step reveal">
+          <div class="n"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></div>
+          <h3>Ask, draft or checklist</h3>
+          <p>CounselAI retrieves the most relevant passages from your workspace and reasons only over them — no outside guesswork.</p>
+        </div>
+        <div class="step reveal">
+          <div class="n"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3>Verify every citation</h3>
+          <p>Click any <b>[Page X]</b> tag to jump to the exact source in the built-in PDF viewer. Trust it, then send it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GROUNDED -->
+<section id="grounded">
+  <div class="wrap split">
+    <div class="copy reveal">
+      <span class="eyebrow">Grounded, not guessed</span>
+      <h2>If it isn't in your documents, CounselAI won't say it.</h2>
+      <p>Every answer, draft line and checklist item carries a page-level citation you can open and verify. No invented sections, no phantom case law — just your evidence, made searchable and defensible.</p>
+      <div class="feat-list">
+        <div class="feat-item">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><h4>Page-anchored citations</h4><p>Click a citation to jump straight to the highlighted source page.</p></div>
+        </div>
+        <div class="feat-item">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+          <div><h4>Private per-workspace storage</h4><p>Documents are isolated to your workspace and never used to train models.</p></div>
+        </div>
+        <div class="feat-item">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div><h4>Retrieval you can audit</h4><p>See exactly which passages informed each response before you rely on it.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="doc-mock glass reveal">
+      <div class="doc-tag">◈ Source · Page 2 of GST DRC-01.pdf</div>
+      <div class="doc-page">
+        3. On scrutiny of returns for the tax period <span class="hl">April 2023 to March 2024</span>, it is observed that there exists a mismatch between the input tax credit availed in <span class="hl">GSTR-3B and the credit auto-populated in GSTR-2A</span>, amounting to <span class="hl">₹2,14,500</span>.<br><br>
+        4. You are hereby directed to furnish a reply along with supporting documents <span class="hl">within thirty days</span> from the date of service of this notice, failing which the matter shall be decided ex-parte.
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <span class="cite" style="font-size:12px">◈ Cited in Ask</span>
+        <span class="cite" style="font-size:12px">◈ Cited in Draft</span>
+        <span class="cite" style="font-size:12px">◈ Cited in Checklist</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECONDARY FEATURES -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Built for real casework</span>
+      <h2 class="sec-h">Everything you need around the answer</h2>
+    </div>
+    <div class="fgrid">
+      <div class="fcard glass reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 0L8 7m4-4l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>OCR for scanned notices</h3><p>Photographed or scanned PDFs are read automatically — no retyping, up to 25 MB per file.</p></div>
+      <div class="fcard glass reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18" stroke="currentColor" stroke-width="1.5"/></svg></div><h3>Hindi &amp; English</h3><p>Ask and receive answers across both languages — built for Indian tax &amp; legal documents.</p></div>
+      <div class="fcard glass reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 4v16" stroke="currentColor" stroke-width="1.8"/></svg></div><h3>Built-in PDF viewer</h3><p>Read the source next to the answer and jump to any cited page in a click.</p></div>
+      <div class="fcard glass reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M21 21v-2a4 4 0 00-3-3.87" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>Workspaces</h3><p>Keep each client or matter separate — documents, history and usage stay organised per workspace.</p></div>
+      <div class="fcard glass reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 20V10M18 20V4M6 20v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>Usage you can see</h3><p>A clear daily meter of AI actions so you always know where your plan stands.</p></div>
+      <div class="fcard glass reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 10V7a4 4 0 018 0v3" stroke="currentColor" stroke-width="1.8"/></svg></div><h3>Private by design</h3><p>Your files live in an isolated workspace and are never used to train foundation models.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Pricing</span>
+      <h2 class="sec-h">Start free. Upgrade when the caseload grows.</h2>
+      <p>Simple daily limits on AI actions — Ask, Draft and Checklist each count as one. Prices below are placeholders; edit to your final numbers.</p>
+    </div>
+    <div class="price-grid">
+      <div class="price glass reveal">
+        <h3>Free</h3>
+        <div class="desc">For trying CounselAI on a live notice.</div>
+        <div class="amt">₹0</div>
+        <div class="cap">10 AI actions / day</div>
+        <ul>
+          <li><span class="t">◆</span> Ask, Draft &amp; Checklist</li>
+          <li><span class="t">◆</span> Page-level citations</li>
+          <li><span class="t">◆</span> OCR &amp; PDF viewer</li>
+          <li><span class="t">◆</span> 1 workspace</li>
+        </ul>
+        <a href="#" class="btn btn-ghost">Get started</a>
+      </div>
+      <div class="price pop glass reveal">
+        <span class="tag">Most popular</span>
+        <h3>Starter</h3>
+        <div class="desc">For professionals handling notices weekly.</div>
+        <div class="amt">₹999<small>/mo</small></div>
+        <div class="cap">200 AI actions / day</div>
+        <ul>
+          <li><span class="t">◆</span> Everything in Free</li>
+          <li><span class="t">◆</span> 20× higher daily limit</li>
+          <li><span class="t">◆</span> Multiple workspaces</li>
+          <li><span class="t">◆</span> Priority processing</li>
+          <li><span class="t">◆</span> Email support</li>
+        </ul>
+        <a href="#" class="btn btn-primary">Start Starter</a>
+      </div>
+      <div class="price glass reveal">
+        <h3>Firm</h3>
+        <div class="desc">For teams &amp; practices at scale.</div>
+        <div class="amt">Let's talk</div>
+        <div class="cap">Custom limits &amp; seats</div>
+        <ul>
+          <li><span class="t">◆</span> Everything in Starter</li>
+          <li><span class="t">◆</span> Team seats &amp; roles</li>
+          <li><span class="t">◆</span> Custom daily limits</li>
+          <li><span class="t">◆</span> Onboarding &amp; SLA</li>
+        </ul>
+        <a href="#" class="btn btn-ghost">Contact sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">FAQ</span>
+      <h2 class="sec-h">Questions, answered</h2>
+    </div>
+    <div class="faq-list">
+      <details class="glass" open><summary>How is this different from ChatGPT?<span class="plus"></span></summary><div class="faq-body"><div class="faq-inner"><p>CounselAI only answers from the documents you upload and cites the exact page for every claim. A general chatbot draws on training data and can invent sections, figures or case law — a real risk in a formal reply.</p></div></div></details>
+      <details class="glass"><summary>What kinds of notices does it handle?<span class="plus"></span></summary><div class="faq-body"><div class="faq-inner"><p>It's built for Indian tax and legal notices — CBDT income-tax and GST notices in particular — and can also draft legal letters and client memos. Because it works from your documents, it adapts to whatever you upload.</p></div></div></details>
+      <details class="glass"><summary>Can it read scanned or photographed notices?<span class="plus"></span></summary><div class="faq-body"><div class="faq-inner"><p>Yes. Scanned pages are processed with OCR automatically, so you don't have to retype anything. PDFs up to 25 MB are supported.</p></div></div></details>
+      <details class="glass"><summary>Does it work in Hindi?<span class="plus"></span></summary><div class="faq-body"><div class="faq-inner"><p>Yes — CounselAI supports both Hindi and English documents and questions.</p></div></div></details>
+      <details class="glass"><summary>Is my data private?<span class="plus"></span></summary><div class="faq-body"><div class="faq-inner"><p>Documents are isolated to your own workspace and are never used to train foundation models. You can delete a document — and its underlying vectors — at any time.</p></div></div></details>
+      <details class="glass"><summary>What counts as an "AI action"?<span class="plus"></span></summary><div class="faq-body"><div class="faq-inner"><p>Each Ask, Draft or Checklist request counts as one action against your daily limit. Uploading and reading documents does not.</p></div></div></details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="cta-band">
+    <h2>Turn your next notice into a reply you can defend.</h2>
+    <p>Start free today — no card required. Upload a notice and see the citations for yourself.</p>
+    <div class="cta-actions">
+      <a href="#" class="btn btn-white btn-lg">Get started free</a>
+      <a href="#" class="btn btn-lg" style="background:rgba(255,255,255,.16);color:#F4EFEE;border:1px solid rgba(255,255,255,.34)">Talk to us</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-inner">
+      <div class="foot-grid">
+        <div>
+          <a href="#" class="logo"><span class="mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Counsel<span>AI</span></a>
+          <p class="fdesc">AI that answers tax &amp; legal notices from your own documents — with a citation for every line.</p>
+        </div>
+        <div class="fcol"><h5>Product</h5><a href="#features">Features</a><a href="#how">How it works</a><a href="#grounded">Citations</a><a href="#pricing">Pricing</a></div>
+        <div class="fcol"><h5>Company</h5><a href="#">About</a><a href="#">Security</a><a href="#">Contact</a><a href="#">Careers</a></div>
+        <div class="fcol"><h5>Legal</h5><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Data handling</a></div>
+      </div>
+      <div class="foot-bot">
+        <span>© 2026 CounselAI. All rights reserved.</span>
+        <span>Made for CAs, advocates &amp; businesses in India.</span>
+      </div>
+      <p class="disclaimer">CounselAI is a drafting and research assistant, not a substitute for professional legal or tax advice. Always review generated drafts and citations before filing or acting on them.</p>
+  </div>
+</footer>
+
+<script>
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // --- opening animation: hand scrolling back once the curtain has lifted
+  const boot = document.getElementById('boot');
+  setTimeout(() => {
+    document.body.classList.remove('booting');
+    boot && boot.remove();
+  }, reduced ? 250 : 1800);
+
+  // --- nav
+  const pill = document.getElementById('navpill');
+  addEventListener('scroll', () => pill.classList.toggle('scrolled', scrollY > 10));
+
+  // --- hero mock tabs
+  document.querySelectorAll('.mtab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.mtab').forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    const k = t.dataset.tab;
+    document.querySelectorAll('.tabpane').forEach(p => p.style.display = p.dataset.pane === k ? 'block' : 'none');
+  }));
+
+  // --- FAQ: animate height in both directions (native <details> can't tween it)
+  document.querySelectorAll('.faq-list details').forEach(d => {
+    const summary = d.querySelector('summary');
+    const body = d.querySelector('.faq-body');
+    if (!summary || !body) return;
+
+    if (d.open) body.classList.add('open');   // the one open by default
+
+    summary.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (d.open) {
+        // collapse first, then drop the attribute once the row has closed.
+        // transitionend alone isn't reliable (reduced motion, interrupted
+        // transitions, background tabs), so a timer guarantees it settles —
+        // otherwise the panel gets stuck open and won't toggle again.
+        body.classList.remove('open');
+        let settled = false;
+        const close = () => { if (settled) return; settled = true; d.open = false; };
+        body.addEventListener('transitionend', close, { once: true });
+        setTimeout(close, 550);
+      } else {
+        d.open = true;
+        requestAnimationFrame(() => body.classList.add('open'));
+      }
+    });
+  });
+
+  // --- scroll reveal
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }), { threshold: .12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

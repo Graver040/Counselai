@@ -1,4 +1,15 @@
-# Add backend Python dependencies here
-flask
-sqlalchemy
-alembic
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+supabase
+pymupdf
+pytesseract
+Pillow
+openai
+anthropic
+pinecone
+certifi
+PyJWT[crypto]
+slowapi

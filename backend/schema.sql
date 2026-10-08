@@ -1,0 +1,207 @@
+-- CounselAI — Supabase schema (source of truth; run in the SQL Editor).
+-- Idempotent: safe to run repeatedly. Mirrors what the backend code reads/writes.
+--
+-- Tables: workspaces, workspace_members, documents, document_chunks
+-- Plus: auto-provision trigger (workspace + membership on signup).
+-- RLS: enabled with policies; the backend uses the SERVICE ROLE key which
+--      bypasses RLS, so these policies protect any direct client access.
+
+-- ============================================================ TENANCY
+create table if not exists workspaces (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null default 'My Workspace',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists workspace_members (
+  workspace_id uuid not null references workspaces(id) on delete cascade,
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  role         text not null default 'owner',
+  created_at   timestamptz not null default now(),
+  primary key (workspace_id, user_id)
+);
+create index if not exists idx_members_user on workspace_members(user_id);
+
+-- ============================================================ DOCUMENTS
+create table if not exists documents (
+  id             uuid primary key default gen_random_uuid(),
+  workspace_id   uuid not null references workspaces(id) on delete cascade,
+  uploaded_by    uuid references auth.users(id),
+  filename       text not null,
+  storage_path   text not null,
+  mime_type      text,
+  file_size      bigint,
+  status         text not null default 'processing',  -- processing | ready | failed
+  page_count     int,
+  chunk_count    int,
+  ocr_page_count int,
+  error          text,
+  created_at     timestamptz not null default now()
+);
+create index if not exists idx_docs_ws on documents(workspace_id);
+
+-- Backfill columns if the table pre-existed without them:
+-- mime_type/file_size are written by the upload route; without them every
+-- upload fails its insert and rolls back the stored object.
+alter table documents add column if not exists mime_type      text;
+alter table documents add column if not exists file_size      bigint;
+alter table documents add column if not exists page_count     int;
+alter table documents add column if not exists chunk_count    int;
+alter table documents add column if not exists ocr_page_count int;
+alter table documents add column if not exists error          text;
+
+-- ============================================================ CHUNKS
+-- NOTE: the ingest worker writes `content` (not `chunk_text`). If an older
+-- `chunk_text NOT NULL` column exists, drop it — `content` is the source of truth.
+create table if not exists document_chunks (
+  id           uuid primary key default gen_random_uuid(),
+  document_id  uuid not null references documents(id) on delete cascade,
+  workspace_id uuid not null references workspaces(id) on delete cascade,
+  chunk_index  int  not null,
+  page_number  int  not null,
+  content      text not null,
+  created_at   timestamptz not null default now()
+);
+create index if not exists idx_chunks_doc on document_chunks(document_id);
+
+alter table document_chunks add column if not exists content text;
+alter table document_chunks drop column if exists chunk_text;
+
+-- ============================================================ USAGE METERING
+-- One row per billable action (upload | ask | draft | checklist). Best-effort:
+-- the backend swallows insert failures so metering never breaks a request.
+create table if not exists usage_logs (
+  id            uuid primary key default gen_random_uuid(),
+  workspace_id  uuid not null references workspaces(id) on delete cascade,
+  user_id       uuid references auth.users(id),
+  action        text not null,                 -- upload | ask | draft | checklist
+  document_id   uuid,
+  input_tokens  int  not null default 0,
+  output_tokens int  not null default 0,
+  model         text,
+  meta          jsonb not null default '{}'::jsonb,
+  created_at    timestamptz not null default now()
+);
+create index if not exists idx_usage_ws_time on usage_logs(workspace_id, created_at);
+
+-- Backfill columns if an older usage_logs table pre-existed with a different shape
+-- (create-if-not-exists above does NOT alter an existing table):
+alter table usage_logs add column if not exists user_id       uuid;
+alter table usage_logs add column if not exists action        text;
+alter table usage_logs add column if not exists document_id   uuid;
+alter table usage_logs add column if not exists input_tokens  int  not null default 0;
+alter table usage_logs add column if not exists output_tokens int  not null default 0;
+alter table usage_logs add column if not exists model         text;
+alter table usage_logs add column if not exists meta          jsonb not null default '{}'::jsonb;
+
+-- ============================================================ PLANS
+-- Drives both the daily action quota (usage service) and the device/session
+-- limit (sessions router). Kept on the workspace, not the user, because
+-- billing and quotas are per-workspace everywhere else in the schema.
+alter table workspaces add column if not exists plan text not null default 'free';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'workspaces_plan_check'
+  ) then
+    alter table workspaces add constraint workspaces_plan_check
+      check (plan in ('free', 'starter', 'enterprise'));
+  end if;
+end $$;
+
+-- ============================================================ ACTIVE SESSIONS
+-- One row per signed-in device. `session_token` is a fingerprint (the last 32
+-- chars of the Supabase JWT), never the whole token. A session is considered
+-- stale once `last_seen_at` is older than 24h; the frontend heartbeat refreshes
+-- it every 5 minutes.
+create table if not exists active_sessions (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid references auth.users(id) on delete cascade,
+  workspace_id  uuid references workspaces(id) on delete cascade,
+  session_token text not null unique,
+  device_info   text,
+  ip_address    text,
+  last_seen_at  timestamptz not null default now(),
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists active_sessions_user_id
+  on active_sessions (user_id, last_seen_at desc);
+create index if not exists active_sessions_workspace_id
+  on active_sessions (workspace_id, last_seen_at desc);
+
+-- ============================================================ AUTO-PROVISION
+-- Every new auth user gets a workspace + owner membership, so get_current_user
+-- can always resolve a workspace_id (otherwise every request 403s).
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare ws_id uuid;
+begin
+  insert into workspaces (name) values ('My Workspace') returning id into ws_id;
+  insert into workspace_members (workspace_id, user_id, role)
+    values (ws_id, new.id, 'owner');
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- ============================================================ RLS
+alter table workspaces        enable row level security;
+alter table workspace_members enable row level security;
+alter table documents         enable row level security;
+alter table document_chunks   enable row level security;
+alter table usage_logs        enable row level security;
+alter table active_sessions   enable row level security;
+
+-- Users can see and revoke only their own sessions (the backend writes with the
+-- service role, which bypasses this).
+drop policy if exists sessions_own on active_sessions;
+create policy sessions_own on active_sessions
+  for all using (user_id = auth.uid());
+
+-- Users can read their own workspaces' usage (writes happen via service role).
+drop policy if exists usage_member_read on usage_logs;
+create policy usage_member_read on usage_logs
+  for select using (
+    exists (select 1 from workspace_members m
+            where m.workspace_id = usage_logs.workspace_id and m.user_id = auth.uid())
+  );
+
+-- Members can see their own membership rows.
+drop policy if exists members_self on workspace_members;
+create policy members_self on workspace_members
+  for select using (user_id = auth.uid());
+
+-- Users can read workspaces they belong to.
+drop policy if exists ws_member_read on workspaces;
+create policy ws_member_read on workspaces
+  for select using (
+    exists (select 1 from workspace_members m
+            where m.workspace_id = workspaces.id and m.user_id = auth.uid())
+  );
+
+-- Users can read documents in their workspaces.
+drop policy if exists docs_member_read on documents;
+create policy docs_member_read on documents
+  for select using (
+    exists (select 1 from workspace_members m
+            where m.workspace_id = documents.workspace_id and m.user_id = auth.uid())
+  );
+
+-- Users can read chunks in their workspaces.
+drop policy if exists chunks_member_read on document_chunks;
+create policy chunks_member_read on document_chunks
+  for select using (
+    exists (select 1 from workspace_members m
+            where m.workspace_id = document_chunks.workspace_id and m.user_id = auth.uid())
+  );
+
+notify pgrst, 'reload schema';
