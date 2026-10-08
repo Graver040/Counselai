@@ -49,8 +49,13 @@ def retrieve(workspace_id: str, query: str,
     ).data or []
     by_key = {(r["document_id"], r["chunk_index"]): r for r in rows}
 
+    # Scoped by workspace as well as id: the backend uses the service-role key,
+    # which bypasses RLS, so tenant isolation here is ours to enforce. Namespace
+    # isolation in the vector store should already guarantee it — this is the
+    # defence-in-depth second lock.
     docs = (
         sb.table("documents").select("id, filename")
+        .eq("workspace_id", workspace_id)
         .in_("id", doc_ids).execute()
     ).data or []
     filename = {d["id"]: d["filename"] for d in docs}

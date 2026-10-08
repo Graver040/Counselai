@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CounselAI — Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg0:#F4EFEE;--head:#1C2721;--fg:#3A4A42;--muted:#5F6C5D;--faint:#8C968A;
+    --blue:#B4502F;--blue-strong:#BC5339;--blue-soft:rgba(188,83,57,.1);
+    --emerald:#4F7B58;--emerald-soft:rgba(79,123,88,.14);--amber:#D9A93F;
+    --glass:rgba(255,255,255,.6);--glass-border:rgba(255,255,255,.85);
+    --line:rgba(44,61,55,.1);--blur:blur(20px) saturate(140%);
+    --shadow-md:0 14px 34px rgba(40,55,48,.1);--edge:inset 0 1px 0 rgba(255,255,255,.7);
+    --font-sans:'Hanken Grotesk',system-ui,sans-serif;--font-display:'Bricolage Grotesque',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-sans);color:var(--fg);background:var(--bg0);-webkit-font-smoothing:antialiased;min-height:100vh}
+  .bg-mesh{position:fixed;inset:0;z-index:-1;background:linear-gradient(150deg,#F7F3EE,#F1EBE4 55%,#ECE5DD)}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:52px 24px 72px}
+  .logo{display:flex;align-items:center;gap:11px;font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--head)}
+  .logo .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(150deg,#BC5339,#D86E51);display:grid;place-items:center;color:#fff}
+  .logo span{color:var(--blue)}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--blue);margin:34px 0 12px}
+  h1{font-family:var(--font-display);font-weight:800;font-size:clamp(30px,4vw,46px);letter-spacing:-.03em;color:var(--head);line-height:1.02}
+  .sub{font-size:17px;color:var(--muted);margin-top:14px;max-width:580px}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:22px;font-size:13px;color:var(--muted)}
+  .legend b{color:var(--head);font-family:var(--font-display);font-weight:800}
+  .lbl{display:flex;align-items:baseline;gap:10px;margin:44px 0 16px}
+  .lbl h2{font-family:var(--font-display);font-size:13px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+  .lbl i{flex:1;height:1px;background:var(--line)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .card{border-radius:20px;overflow:hidden;background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--glass-border);box-shadow:var(--shadow-md),var(--edge);transition:.2s;display:flex;flex-direction:column}
+  .card:hover{transform:translateY(-4px);box-shadow:0 26px 54px rgba(40,55,48,.16)}
+  .thumb{height:146px;overflow:hidden;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.3)}
+  .card .body{padding:15px 17px 17px}
+  .card h3{font-family:var(--font-display);font-size:16px;font-weight:800;color:var(--head);letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+  .card p{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.45}
+  .tag{font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--emerald-soft);color:var(--emerald);margin-left:auto;flex:none}
+  .tag.auth{background:var(--blue-soft);color:var(--blue)}
+  .tag.pub{background:rgba(217,169,63,.18);color:#A8781A}
+  .tag.state{background:rgba(44,61,55,.08);color:var(--muted)}
+  /* mini mocks */
+  .m{width:84%;height:78%;border-radius:9px;background:#fff;border:1px solid var(--line);box-shadow:0 6px 16px rgba(40,55,48,.1);overflow:hidden;display:flex}
+  .m .side{width:25%;background:rgba(44,61,55,.05);border-right:1px solid var(--line);padding:5px}
+  .m .side .d{height:5px;border-radius:3px;background:rgba(44,61,55,.13);margin-bottom:4px}
+  .m .side .d.a{background:rgba(188,83,57,.4)}
+  .m .mn{flex:1;padding:8px;min-width:0}
+  .m .bar{height:6px;border-radius:3px;background:rgba(44,61,55,.1);margin-bottom:5px}
+  .m .bar.s{width:55%}.m .bar.o{background:var(--blue-strong);width:38%}.m .bar.y{background:rgba(217,169,63,.5)}
+  .m .bar.g{background:rgba(79,123,88,.45);width:45%}
+  .m .row{display:flex;gap:5px;margin-top:6px}
+  .m .row .c{flex:1;height:30px;border-radius:6px;background:rgba(44,61,55,.06);border:1px solid var(--line)}
+  .m .row .c.hi{background:var(--blue-soft);border-color:rgba(188,83,57,.4)}
+  .m .hero{height:9px;border-radius:4px;background:var(--head);width:72%;margin-bottom:5px}
+  .m .chip{height:13px;border-radius:20px;background:var(--blue-strong);width:36%;margin-top:6px}
+  .m.center{background:none;border:0;box-shadow:none;align-items:center;justify-content:center}
+  .m .auth{width:78%;height:82%;border-radius:10px;overflow:hidden;display:flex;box-shadow:0 8px 20px rgba(40,55,48,.14);border:1px solid var(--line)}
+  .m .auth .l{width:47%;background:radial-gradient(130% 115% at 4% 0%,#5F8368,#2E4836 45%,#17281E);padding:6px;display:flex;align-items:flex-end;gap:3px}
+  .m .auth .l .sc{flex:1;height:20px;border-radius:4px;background:rgba(255,255,255,.14)}
+  .m .auth .l .sc.a{background:#F4EFEE}
+  .m .auth .r{flex:1;background:#fff;padding:8px}
+  .m .paper{flex:1;background:#fff;padding:9px}
+  .foot{margin-top:48px;font-size:13px;color:var(--faint);border-top:1px solid var(--line);padding-top:20px}
+  .foot b{color:var(--head)}
+  @media(max-width:840px){.grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="wrap">
+  <div class="logo"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Counsel<span>AI</span></div>
+  <div class="eyebrow">Design mockups · v1</div>
+  <h1>Thirteen screens, one design system.</h1>
+  <p class="sub">Off-white glassmorphic UI on the Redwood palette — Scarab-green type, Orange Vermillion accents, Glad Yellow citations, Bricolage Grotesque display. Click any screen to open it; the sidebars link to each other.</p>
+  <div class="legend">
+    <span><b>Base</b> #F4EFEE</span><span><b>Accent</b> #BC5339</span><span><b>Type</b> #1C2721</span><span><b>Success</b> #4F7B58</span><span><b>Cite</b> #F5E1AC</span>
+  </div>
+
+  <div class="lbl"><h2>Marketing</h2><i></i></div>
+  <div class="grid">
+    <a class="card" href="landing-preview.html">
+      <div class="thumb"><div class="m"><div class="mn"><div class="hero"></div><div class="bar s"></div><div class="chip"></div><div class="row"><div class="c"></div><div class="c"></div><div class="c"></div></div></div></div></div>
+      <div class="body"><h3>Landing<span class="tag pub">Public</span></h3><p>Hero, problem, 3 pillars, how-it-works, citations, pricing, FAQ, CTA.</p></div>
+    </a>
+    <a class="card" href="404-preview.html">
+      <div class="thumb"><div class="m center"><div style="width:62%;background:#fff;border:1px solid var(--line);border-radius:9px;padding:14px;text-align:center;box-shadow:0 8px 20px rgba(40,55,48,.12)"><div style="width:34px;height:40px;background:rgba(44,61,55,.06);border:1px solid var(--line);border-radius:5px;margin:0 auto 8px"></div><div class="bar" style="width:70%;margin:0 auto 5px"></div><div class="bar s" style="margin:0 auto"></div></div></div></div>
+      <div class="body"><h3>404<span class="tag state">State</span></h3><p>Not-found page with torn-page mark and quick links back.</p></div>
+    </a>
+  </div>
+
+  <div class="lbl"><h2>Authentication</h2><i></i></div>
+  <div class="grid">
+    <a class="card" href="login-preview.html">
+      <div class="thumb"><div class="m center"><div class="auth"><div class="l"><div class="sc a"></div><div class="sc"></div><div class="sc"></div></div><div class="r"><div class="bar" style="width:60%;margin:0 auto 7px"></div><div class="row"><div class="c" style="height:16px"></div><div class="c" style="height:16px"></div></div><div class="bar" style="height:16px;border-radius:5px;margin-top:6px"></div><div class="bar" style="height:16px;border-radius:5px"></div><div class="chip" style="width:100%;height:15px"></div></div></div></div></div>
+      <div class="body"><h3>Sign in<span class="tag auth">Auth</span></h3><p>Green split panel, value cards, Google/Github, remember me.</p></div>
+    </a>
+    <a class="card" href="signup-preview.html">
+      <div class="thumb"><div class="m center"><div class="auth"><div class="l"><div class="sc a"></div><div class="sc"></div><div class="sc"></div></div><div class="r"><div class="bar" style="width:70%;margin:0 auto 7px"></div><div class="row"><div class="c" style="height:14px"></div><div class="c" style="height:14px"></div></div><div class="bar" style="height:14px;border-radius:5px;margin-top:5px"></div><div class="bar" style="height:14px;border-radius:5px"></div><div class="chip" style="width:100%;height:14px"></div></div></div></div></div>
+      <div class="body"><h3>Create account<span class="tag auth">Auth</span></h3><p>Onboarding steps 1·2·3, name row, password hint.</p></div>
+    </a>
+    <a class="card" href="forgot-password-preview.html">
+      <div class="thumb"><div class="m center"><div class="auth"><div class="l"><div class="sc a"></div><div class="sc"></div><div class="sc"></div></div><div class="r" style="display:flex;flex-direction:column;justify-content:center"><div style="width:20px;height:20px;border-radius:6px;background:var(--blue-soft);margin:0 auto 8px"></div><div class="bar" style="width:66%;margin:0 auto 5px"></div><div class="bar s" style="margin:0 auto 8px"></div><div class="bar" style="height:15px;border-radius:5px"></div><div class="chip" style="width:100%;height:15px;margin-top:5px"></div></div></div></div></div>
+      <div class="body"><h3>Reset password<span class="tag auth">Auth</span></h3><p>Email capture with success confirmation state.</p></div>
+    </a>
+  </div>
+
+  <div class="lbl"><h2>Application</h2><i></i></div>
+  <div class="grid">
+    <a class="card" href="dashboard-preview.html">
+      <div class="thumb"><div class="m"><div class="side"><div class="d a"></div><div class="d"></div><div class="d"></div><div class="d"></div></div><div class="mn"><div class="bar o"></div><div class="bar"></div><div class="bar s"></div><div class="row"><div class="c hi"></div></div></div></div></div>
+      <div class="body"><h3>Ask workspace<span class="tag">App</span></h3><p>Chat with page citations, tabs, documents rail &amp; source viewer.</p></div>
+    </a>
+    <a class="card" href="draft-preview.html">
+      <div class="thumb"><div class="m"><div class="side"><div class="d"></div><div class="d a"></div><div class="d"></div><div class="d"></div></div><div class="mn" style="display:flex;gap:5px;padding:6px"><div style="width:38%"><div class="row" style="margin:0"><div class="c hi" style="height:16px"></div></div><div class="bar" style="margin-top:5px"></div><div class="bar s"></div></div><div class="paper" style="border:1px solid var(--line);border-radius:5px"><div class="bar s"></div><div class="bar"></div><div class="bar"></div><div class="bar s"></div></div></div></div></div>
+      <div class="body"><h3>Draft<span class="tag">App</span></h3><p>Notice-type picker, instruction, source selection, letter output.</p></div>
+    </a>
+    <a class="card" href="checklist-preview.html">
+      <div class="thumb"><div class="m"><div class="side"><div class="d"></div><div class="d"></div><div class="d a"></div><div class="d"></div></div><div class="mn"><div class="bar g"></div><div class="row" style="margin-top:4px"><div class="c" style="height:14px"></div></div><div class="row" style="margin-top:4px"><div class="c" style="height:14px"></div></div><div class="row" style="margin-top:4px"><div class="c hi" style="height:14px"></div></div></div></div></div>
+      <div class="body"><h3>Checklist<span class="tag">App</span></h3><p>Tickable requirements, progress bar, deadline countdown.</p></div>
+    </a>
+    <a class="card" href="documents-preview.html">
+      <div class="thumb"><div class="m"><div class="side"><div class="d"></div><div class="d"></div><div class="d"></div><div class="d a"></div></div><div class="mn"><div style="border:1px dashed rgba(44,61,55,.25);border-radius:5px;height:20px;margin-bottom:5px"></div><div class="bar"></div><div class="bar"></div><div class="bar s"></div></div></div></div>
+      <div class="body"><h3>Documents<span class="tag">App</span></h3><p>Library table with status badges, dropzone &amp; index stats.</p></div>
+    </a>
+    <a class="card" href="document-preview.html">
+      <div class="thumb"><div class="m"><div class="mn" style="display:flex;gap:4px;padding:6px"><div style="width:15%;background:rgba(44,61,55,.05);border:1px solid var(--line);border-radius:4px"></div><div class="paper" style="border:1px solid var(--line);border-radius:4px"><div class="bar"></div><div class="bar y"></div><div class="bar s"></div><div class="bar"></div></div><div style="width:24%;background:rgba(44,61,55,.05);border:1px solid var(--line);border-radius:4px"></div></div></div></div>
+      <div class="body"><h3>Document viewer<span class="tag">App</span></h3><p>Page thumbnails, highlighted source, metadata &amp; citations.</p></div>
+    </a>
+    <a class="card" href="billing-preview.html">
+      <div class="thumb"><div class="m"><div class="side"><div class="d"></div><div class="d"></div><div class="d"></div><div class="d a"></div></div><div class="mn"><div class="row" style="margin:0"><div class="c hi"></div><div class="c"></div></div><div class="row"><div class="c" style="height:22px"></div><div class="c hi" style="height:22px"></div><div class="c" style="height:22px"></div></div></div></div></div>
+      <div class="body"><h3>Billing<span class="tag">App</span></h3><p>Plan &amp; usage meters, payment method, tiers, invoice history.</p></div>
+    </a>
+    <a class="card" href="settings-preview.html">
+      <div class="thumb"><div class="m"><div class="side"><div class="d"></div><div class="d"></div><div class="d"></div><div class="d a"></div></div><div class="mn" style="display:flex;gap:5px;padding:6px"><div style="width:28%"><div class="d" style="height:6px;border-radius:3px;background:rgba(188,83,57,.35);margin-bottom:4px"></div><div class="d" style="height:6px;border-radius:3px;background:rgba(44,61,55,.1);margin-bottom:4px"></div><div class="d" style="height:6px;border-radius:3px;background:rgba(44,61,55,.1)"></div></div><div class="paper" style="border:1px solid var(--line);border-radius:5px;padding:6px"><div class="bar s"></div><div class="bar"></div><div class="bar"></div></div></div></div></div>
+      <div class="body"><h3>Settings<span class="tag">App</span></h3><p>Profile, workspace, preferences, security &amp; danger zone.</p></div>
+    </a>
+    <a class="card" href="empty-preview.html">
+      <div class="thumb"><div class="m"><div class="side"><div class="d a"></div><div class="d" style="opacity:.4"></div><div class="d" style="opacity:.4"></div></div><div class="mn" style="display:flex;flex-direction:column;justify-content:center;align-items:center"><div style="width:70%;border:1.5px dashed rgba(44,61,55,.25);border-radius:6px;height:34px;margin-bottom:6px"></div><div class="row" style="width:70%"><div class="c" style="height:14px"></div><div class="c" style="height:14px"></div><div class="c" style="height:14px"></div></div></div></div></div>
+      <div class="body"><h3>First run<span class="tag state">State</span></h3><p>Empty workspace — upload prompt, 3 steps, sample notices.</p></div>
+    </a>
+  </div>
+
+  <p class="foot"><b>13 screens</b> · standalone HTML in <b>frontend/public/</b> · every file is self-contained (fonts from Google Fonts, no build step) — open any one directly in a browser.</p>
+</div>
+</body>
+</html>

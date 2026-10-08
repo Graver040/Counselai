@@ -9,10 +9,13 @@ Two variants:
 """
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
-from app.core.deps import CurrentUser, get_current_user
+from app.api.v1._schemas import AskRequest
+from app.core.deps import CurrentUser
+from app.core.quota import require_quota
+from app.core.ratelimit import AI_LIMIT, limiter
 from app.services import llm, retrieval, usage
 
 router = APIRouter(prefix="/ask", tags=["ask"])
@@ -24,15 +27,12 @@ def _sse(event: str, data: str) -> str:
 
 
 @router.post("")
-def ask(payload: dict, user: CurrentUser = Depends(get_current_user)):
-    question = (payload.get("question") or "").strip()
-    if not question:
-        raise HTTPException(400, "`question` is required")
-
-    # optional: restrict the search to specific uploaded documents
-    document_ids = payload.get("document_ids") or None
-
-    contexts = retrieval.retrieve(user.workspace_id, question, document_ids=document_ids)
+@limiter.limit(AI_LIMIT)
+def ask(request: Request, req: AskRequest, user: CurrentUser = Depends(require_quota)):
+    question = req.question
+    contexts = retrieval.retrieve(
+        user.workspace_id, question, document_ids=req.doc_ids()
+    )
     if not contexts:
         return {
             "workspace_id": user.workspace_id,
@@ -54,13 +54,12 @@ def ask(payload: dict, user: CurrentUser = Depends(get_current_user)):
 
 
 @router.post("/stream")
-def ask_stream(payload: dict, user: CurrentUser = Depends(get_current_user)):
-    question = (payload.get("question") or "").strip()
-    if not question:
-        raise HTTPException(400, "`question` is required")
-    document_ids = payload.get("document_ids") or None
-
-    contexts = retrieval.retrieve(user.workspace_id, question, document_ids=document_ids)
+@limiter.limit(AI_LIMIT)
+def ask_stream(request: Request, req: AskRequest, user: CurrentUser = Depends(require_quota)):
+    question = req.question
+    contexts = retrieval.retrieve(
+        user.workspace_id, question, document_ids=req.doc_ids()
+    )
 
     def event_stream():
         if not contexts:

@@ -12,3 +12,4 @@ anthropic
 pinecone
 certifi
 PyJWT[crypto]
+slowapi

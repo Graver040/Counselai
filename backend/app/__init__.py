@@ -1,10 +1,20 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import auth, workspaces, documents, ask, draft, checklist, usage
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+from app.api.v1 import auth, workspaces, documents, ask, draft, checklist, usage, sessions
+from app.core.ratelimit import limiter, rate_limit_handler
 
 
 def create_app():
     app = FastAPI(title="CounselAI API", version="0.1.0")
+
+    # Rate limiting: a generous default on everything, with a stricter bucket
+    # applied per-route to the endpoints that call paid APIs.
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+    app.add_middleware(SlowAPIMiddleware)
 
     app.add_middleware(
         CORSMiddleware,
@@ -28,4 +38,5 @@ def create_app():
     app.include_router(draft.router, prefix="/api/v1")
     app.include_router(checklist.router, prefix="/api/v1")
     app.include_router(usage.router, prefix="/api/v1")
+    app.include_router(sessions.router, prefix="/api/v1")
     return app

@@ -1,22 +1,28 @@
 """Checklist router — produce a compliance/response checklist from a notice,
 grounded in the workspace's uploaded documents with [Page X] citations.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.core.deps import CurrentUser, get_current_user
+from app.api.v1._schemas import InstructionRequest
+from app.core.deps import CurrentUser
+from app.core.quota import require_quota
+from app.core.ratelimit import AI_LIMIT, limiter
 from app.services import llm, retrieval, usage
 
 router = APIRouter(prefix="/checklist", tags=["checklist"])
 
 
 @router.post("")
-def create_checklist(payload: dict, user: CurrentUser = Depends(get_current_user)):
-    instruction = (payload.get("instruction") or "").strip()
-    query = (payload.get("query") or instruction
-             or "compliance requirements, deadlines and documents required").strip()
-    document_ids = payload.get("document_ids") or None
+@limiter.limit(AI_LIMIT)
+def create_checklist(request: Request, req: InstructionRequest,
+                     user: CurrentUser = Depends(require_quota)):
+    instruction = req.instruction
+    query = (req.query or instruction
+             or "compliance requirements, deadlines and documents required")
 
-    contexts = retrieval.retrieve(user.workspace_id, query, document_ids=document_ids)
+    contexts = retrieval.retrieve(
+        user.workspace_id, query, document_ids=req.doc_ids()
+    )
     if not contexts:
         raise HTTPException(404, "No relevant documents found to build a checklist from")
 

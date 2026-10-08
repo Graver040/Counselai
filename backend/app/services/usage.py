@@ -41,9 +41,26 @@ def get_stats(workspace_id: str) -> dict:
     except Exception:
         logger.warning("get_stats failed for ws=%s", workspace_id, exc_info=True)
 
-    # TODO(billing): resolve real plan from a subscription/profile row.
+    # Plan lives on the workspace; it also drives the device limit in the
+    # sessions router. Fall back to "free" if the lookup fails.
     plan = "free"
-    limit = s.free_daily_limit if plan == "free" else s.starter_daily_limit
+    try:
+        res = (
+            get_supabase().table("workspaces")
+            .select("plan")
+            .eq("id", workspace_id)
+            .single()
+            .execute()
+        )
+        plan = (res.data or {}).get("plan") or "free"
+    except Exception:
+        logger.warning("plan lookup failed for ws=%s", workspace_id, exc_info=True)
+
+    limit = {
+        "free": s.free_daily_limit,
+        "starter": s.starter_daily_limit,
+        "enterprise": s.enterprise_daily_limit,
+    }.get(plan, s.free_daily_limit)
     return {
         "used_today": used_today,
         "limit": limit,

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CounselAI — Page not found</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg0:#F4EFEE;--head:#1C2721;--fg:#3A4A42;--muted:#5F6C5D;--faint:#8C968A;
+    --blue:#B4502F;--blue-strong:#BC5339;--blue-soft:rgba(188,83,57,.1);
+    --emerald:#4F7B58;--emerald-soft:rgba(79,123,88,.14);
+    --glass:rgba(255,255,255,.6);--glass-border:rgba(255,255,255,.85);
+    --line:rgba(44,61,55,.1);--line-soft:rgba(44,61,55,.07);--blur:blur(20px) saturate(140%);
+    --shadow-md:0 14px 34px rgba(40,55,48,.1);--shadow-lg:0 34px 70px rgba(40,55,48,.15);
+    --edge:inset 0 1px 0 rgba(255,255,255,.7);
+    --font-sans:'Hanken Grotesk',system-ui,sans-serif;--font-display:'Bricolage Grotesque',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-sans);color:var(--fg);background:var(--bg0);min-height:100vh;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+  .bg-mesh{position:fixed;inset:0;z-index:-1;background:linear-gradient(150deg,#F7F3EE,#F1EBE4 55%,#ECE5DD)}
+  a{color:inherit;text-decoration:none}
+  /* nav pill */
+  .navdock{padding:20px}
+  .navpill{max-width:1080px;margin:0 auto;height:60px;border-radius:999px;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 22px;background:rgba(255,255,255,.66);backdrop-filter:var(--blur);border:1px solid var(--glass-border);box-shadow:var(--shadow-md),var(--edge)}
+  .logo{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.02em;color:var(--head)}
+  .logo .mark{width:31px;height:31px;border-radius:10px;background:linear-gradient(150deg,#BC5339,#D86E51);display:grid;place-items:center;color:#fff}
+  .logo span{color:var(--blue)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:15px;border-radius:999px;padding:12px 22px;cursor:pointer;border:1px solid transparent;transition:.17s}
+  .btn-primary{background:var(--blue-strong);color:#F4EFEE;box-shadow:0 5px 14px rgba(40,55,48,.18)}
+  .btn-primary:hover{background:#A8492F;transform:translateY(-1px)}
+  .btn-ghost{background:rgba(255,255,255,.7);color:var(--head);border-color:var(--glass-border)}
+  .btn-ghost:hover{background:#fff;transform:translateY(-1px)}
+  /* body */
+  .stage{flex:1;display:grid;place-items:center;padding:20px 24px 60px}
+  .box{width:100%;max-width:660px;text-align:center}
+  .card{border-radius:26px;background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--glass-border);box-shadow:var(--shadow-lg),var(--edge);padding:52px 40px 44px}
+  /* torn page mark */
+  .mark404{position:relative;width:132px;height:150px;margin:0 auto 28px}
+  .sheet{position:absolute;inset:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-md);padding:16px 14px;overflow:hidden}
+  .sheet .ln{height:6px;border-radius:3px;background:rgba(44,61,55,.11);margin-bottom:8px}
+  .sheet .ln.s{width:58%}
+  .sheet .ln.hl{background:rgba(188,83,57,.22)}
+  .sheet::after{content:'';position:absolute;left:0;right:0;bottom:0;height:46px;background:var(--bg0);
+    clip-path:polygon(0 46%,9% 30%,20% 52%,31% 26%,42% 50%,54% 24%,66% 48%,78% 28%,89% 50%,100% 32%,100% 100%,0 100%)}
+  .badge404{position:absolute;bottom:-8px;right:-14px;font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:-.03em;color:#F4EFEE;background:var(--blue-strong);padding:7px 14px;border-radius:14px;box-shadow:0 8px 20px rgba(40,55,48,.22);transform:rotate(-6deg)}
+  h1{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,4vw,40px);line-height:1.04;letter-spacing:-.03em;color:var(--head)}
+  .lead{font-size:16.5px;color:var(--muted);max-width:430px;margin:14px auto 0}
+  .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+  .links{margin-top:34px;padding-top:24px;border-top:1px solid var(--line-soft)}
+  .links h4{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-bottom:14px}
+  .chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .chip{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--fg);background:rgba(255,255,255,.62);border:1px solid var(--glass-border);border-radius:20px;padding:9px 15px;transition:.14s}
+  .chip:hover{border-color:var(--blue);color:var(--blue);background:#fff}
+  .chip .ic{color:var(--blue)}
+  .help{font-size:13px;color:var(--faint);margin-top:24px}
+  .help a{color:var(--blue);font-weight:600}
+  @media(max-width:600px){.card{padding:38px 22px 34px}}
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+
+<div class="navdock">
+  <nav class="navpill">
+    <a href="landing-preview.html" class="logo"><span class="mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Counsel<span>AI</span></a>
+    <a href="dashboard-preview.html" class="btn btn-primary">Go to workspace</a>
+  </nav>
+</div>
+
+<div class="stage">
+  <div class="box">
+    <div class="card">
+      <div class="mark404">
+        <div class="sheet">
+          <div class="ln"></div><div class="ln s"></div><div class="ln hl"></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln s"></div>
+        </div>
+        <span class="badge404">404</span>
+      </div>
+      <h1>This page isn't in the record.</h1>
+      <p class="lead">The link may be broken, or the document or workspace it pointed to has been deleted.</p>
+      <div class="actions">
+        <a href="dashboard-preview.html" class="btn btn-primary">Back to workspace</a>
+        <a href="landing-preview.html" class="btn btn-ghost">Go to homepage</a>
+      </div>
+
+      <div class="links">
+        <h4>Or jump to</h4>
+        <div class="chips">
+          <a class="chip" href="documents-preview.html"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l5 5v13H6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>Documents</a>
+          <a class="chip" href="draft-preview.html"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 20h16M4 20l1-4 10-10 3 3-10 10-4 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>Draft a reply</a>
+          <a class="chip" href="checklist-preview.html"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/></svg></span>Checklist</a>
+          <a class="chip" href="billing-preview.html"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.8"/></svg></span>Billing</a>
+        </div>
+      </div>
+    </div>
+    <p class="help">Still stuck? <a href="#">Contact support</a> — we'll help you find it.</p>
+  </div>
+</div>
+</body>
+</html>

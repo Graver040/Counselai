@@ -34,10 +34,21 @@ class Settings(BaseSettings):
     claude_model: str = "claude-sonnet-4-6"  # balanced cost/quality for per-query RAG
     answer_top_k: int = 8                    # chunks retrieved per question
 
-    # Plan limits (billable AI actions per day). TODO: read plan from a
-    # subscription/profile table once billing lands; defaults to "free".
+    # Plan limits (billable AI actions per day). The plan itself is read from
+    # workspaces.plan; these are the per-plan daily quotas.
     free_daily_limit: int = 10
     starter_daily_limit: int = 200
+    enterprise_daily_limit: int = 2000
+
+    # Shared secret for the unauthenticated cron endpoints (/sessions/cleanup).
+    # Unset => those endpoints refuse to run (fail closed).
+    cron_secret: str = ""
+
+    # Rate limiting. `rate_limit_ai` guards the endpoints that call paid APIs.
+    # Storage is in-process (per worker) unless a URI such as redis://… is set.
+    rate_limit_default: str = "120/minute"
+    rate_limit_ai: str = "10/minute"
+    rate_limit_storage_uri: str = ""
 
     # Pinecone
     pinecone_api_key: str = ""

@@ -29,6 +29,8 @@ create table if not exists documents (
   uploaded_by    uuid references auth.users(id),
   filename       text not null,
   storage_path   text not null,
+  mime_type      text,
+  file_size      bigint,
   status         text not null default 'processing',  -- processing | ready | failed
   page_count     int,
   chunk_count    int,
@@ -39,6 +41,10 @@ create table if not exists documents (
 create index if not exists idx_docs_ws on documents(workspace_id);
 
 -- Backfill columns if the table pre-existed without them:
+-- mime_type/file_size are written by the upload route; without them every
+-- upload fails its insert and rolls back the stored object.
+alter table documents add column if not exists mime_type      text;
+alter table documents add column if not exists file_size      bigint;
 alter table documents add column if not exists page_count     int;
 alter table documents add column if not exists chunk_count    int;
 alter table documents add column if not exists ocr_page_count int;
@@ -88,6 +94,43 @@ alter table usage_logs add column if not exists output_tokens int  not null defa
 alter table usage_logs add column if not exists model         text;
 alter table usage_logs add column if not exists meta          jsonb not null default '{}'::jsonb;
 
+-- ============================================================ PLANS
+-- Drives both the daily action quota (usage service) and the device/session
+-- limit (sessions router). Kept on the workspace, not the user, because
+-- billing and quotas are per-workspace everywhere else in the schema.
+alter table workspaces add column if not exists plan text not null default 'free';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'workspaces_plan_check'
+  ) then
+    alter table workspaces add constraint workspaces_plan_check
+      check (plan in ('free', 'starter', 'enterprise'));
+  end if;
+end $$;
+
+-- ============================================================ ACTIVE SESSIONS
+-- One row per signed-in device. `session_token` is a fingerprint (the last 32
+-- chars of the Supabase JWT), never the whole token. A session is considered
+-- stale once `last_seen_at` is older than 24h; the frontend heartbeat refreshes
+-- it every 5 minutes.
+create table if not exists active_sessions (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid references auth.users(id) on delete cascade,
+  workspace_id  uuid references workspaces(id) on delete cascade,
+  session_token text not null unique,
+  device_info   text,
+  ip_address    text,
+  last_seen_at  timestamptz not null default now(),
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists active_sessions_user_id
+  on active_sessions (user_id, last_seen_at desc);
+create index if not exists active_sessions_workspace_id
+  on active_sessions (workspace_id, last_seen_at desc);
+
 -- ============================================================ AUTO-PROVISION
 -- Every new auth user gets a workspace + owner membership, so get_current_user
 -- can always resolve a workspace_id (otherwise every request 403s).
@@ -116,6 +159,13 @@ alter table workspace_members enable row level security;
 alter table documents         enable row level security;
 alter table document_chunks   enable row level security;
 alter table usage_logs        enable row level security;
+alter table active_sessions   enable row level security;
+
+-- Users can see and revoke only their own sessions (the backend writes with the
+-- service role, which bypasses this).
+drop policy if exists sessions_own on active_sessions;
+create policy sessions_own on active_sessions
+  for all using (user_id = auth.uid());
 
 -- Users can read their own workspaces' usage (writes happen via service role).
 drop policy if exists usage_member_read on usage_logs;
